@@ -15,11 +15,9 @@ contract GameFactory {
 	address awaitingPlayer;
 	
 	// currently active games
-	mapping(address => GameInfo) liveGames;
+	mapping(address => GameInfo) public liveGames;
 
-	event onGameStarted(address gameInstance, address p1, address p2);
-	event onGameEnded(address gameInstance, address p1, address p2);
-
+	
 
 	function GameFactory(bytes32 _version) public {
 		owner = msg.sender;
@@ -34,7 +32,7 @@ contract GameFactory {
 	// In this case, we have to ensure that 
 	// (1) msg.sender != awaitingPlayer; and
 	// (2) liveGames[msg.sender] key exists (i.e. fields of the struct are 0)
-	function startGame() checkUser() public returns(address) {
+	function startGame() checkUser() public {
 		if (awaitingPlayer == address(0x0)) {
 			awaitingPlayer = msg.sender;
 		}
@@ -46,15 +44,10 @@ contract GameFactory {
 			liveGames[p1] = GameInfo(true, p1, p2, game);
 			liveGames[p2] = GameInfo(true, p1, p2, game);
 			awaitingPlayer = address(0x0);
-			onGameStarted(game, p1, p2);
-			return game;
 		}
-
-		return 0x0;
 	}
 
 	function endGame(address gameInstance, address p1, address p2) checkEndGameCaller(gameInstance, p1, p2) public {
-		onGameEnded(gameInstance, p1, p2);
 		delete liveGames[p1];
 		delete liveGames[p2];
 	}
@@ -109,7 +102,9 @@ contract HexGameInstance {
 	// game board
 	Cell[11][11] public gameField;
 
-	event onPiecePlaced(uint row, uint col, PieceColor pieceColor);
+	event onGameStarted(address gameInstance, address p1, address p2);
+	event onGameEnded(address winner);
+	event onPiecePlaced(uint x, uint y, PieceColor pieceColor);
 	//event onPieceSwapped();
 	
 	function HexGameInstance(GameFactory _parentContract, address _player1, address _player2) public {
@@ -118,13 +113,14 @@ contract HexGameInstance {
 		players[1] = _player2;
 		mappingPlayerColor[players[0]] = PieceColor.RED;
 		mappingPlayerColor[players[1]] = PieceColor.BLU;
+		onGameStarted(this, players[0], players[1]);
 	}
 
-	function placePiece(uint row, uint col, PieceColor color) checkValidMove(row, col, color) public {
-		gameField[col][row].piece = color;
+	function placePiece(uint x, uint y, PieceColor color) checkValidMove(x, y, color) public {
+		gameField[y][x].piece = color;
 		// TODO check winning condition?
 		nextMove();
-		onPiecePlaced(row, col, color);
+		onPiecePlaced(x, y, color);
 	}
 
 	/*
@@ -136,6 +132,7 @@ contract HexGameInstance {
 	// kill contract / display win-lose messages to involved parties. 
 	// TODO in the future, we might make game entry payable?
 	function endGame() public {
+		onGameEnded(players[0]);
 		parentContract.endGame(this, players[0], players[1]);
 		selfdestruct(0x0);
 	}
@@ -154,6 +151,7 @@ contract HexGameInstance {
 		require(x >= 0 && x < 11);
 		require(y >= 0 && y < 11);
 		require(mappingPlayerColor[msg.sender] == color);
+		require(gameField[y][x].piece == PieceColor.NONE);
 		_;
 	}
 
