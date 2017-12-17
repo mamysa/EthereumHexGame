@@ -80,9 +80,15 @@ Board.prototype.getNeighbours = function(n) {
 	return cells;
 }
 
+/**
+ * Gets destination cells for appropriate piece color. 
+ * @color PieceColor
+ * @merge merges cells from two sides of the board into one list. Setting merge=false
+ * return two sets of cells which is useful for path finding.
+ */
 Board.prototype.getDestinationCellCoordinates = function(color, merge=true) {
-	cells1 = [] 
-	cells2 = [] 
+	var cells1 = [] 
+	var cells2 = [] 
 	if (color == PieceColor.RED) {
 		for (var y = 0; y < BOARD_SIZE; y++)  {
 			cells1.push( { x: 0, y: y } );	
@@ -102,12 +108,19 @@ Board.prototype.getDestinationCellCoordinates = function(color, merge=true) {
 	return { lhs: cells1, rhs: cells2 };
 }
 
+function compareCoordinates(a, b) {
+	return a.x == b.x && a.y == b.y;
+}
+
+/**
+ * Finds path across the board for given piece color. DFS is performed only when
+ * destination cells on both sides contain pieces of appropriate color.
+ */ 
 function findPath(board, color) {
 	cells = board.getDestinationCellCoordinates(color, false);
 
-	// filter cells that contain pieces of color	
-	var lhs = cells.lhs.filter( function(cell) { return board.getCell(cell) == color } );
-	var rhs = cells.rhs.filter( function(cell) { return board.getCell(cell) == color } );
+	var lhs = cells.lhs.filter( cell => { return board.getCell(cell) == color } );
+	var rhs = cells.rhs.filter( cell => { return board.getCell(cell) == color } );
 	if (lhs.length != 0 && rhs.length != 0) {
 		for (var i = 0; i < lhs.length; i++) {
 			var path = dfs(board, lhs[i], rhs, color);
@@ -120,54 +133,55 @@ function findPath(board, color) {
 	return [];
 }
 
+/**
+ * DFS procedure.
+ */
 function dfs(board, start_state, goal_states, color) {
 	open_list = [];
 	closed_list = [];
 
 	open_list.push(start_state);
-	dict = { };
+	previous_node = { };
 
 
 	var state;
-	var path_found = false;
 	while (open_list.length != 0) {
 		state = open_list.pop();
 		var successors = board.getNeighbours(state);
 
-		
 		// found the goal;
-		if (goal_states.filter(e => { return e.x == state.x && e.y == state.y; } ).length != 0) {
-			path_found = true;
-			break;
+		var goals = goal_states.filter(e => { return compareCoordinates(e, state); });
+		if (goals.length != 0) {
+			return reconstructPath(state, previous_node);
 		}
 
-		successors.forEach(successor => {
-			if (board.getCell(successor) == color) {
-			// do not expand nodes previously visited nodes
-				if (closed_list.filter(e => { return e.x == successor.x && e.y == successor.y; } ).length == 0) {
-					open_list.push(successor);
-					dict[`${successor.x},${successor.y}`] = state;
-				}
+		for (var i = 0; i < successors.length; i++) {
+			var succ = successors[i];
+			var closed = closed_list.filter(e => { return compareCoordinates(e, succ); });
+			if (board.getCell(succ) == color && closed.length == 0) {
+				open_list.push(succ);
+				previous_node[`${succ.x},${succ.y}`] = state;
 			}
-		});
+		}
 
 		closed_list.push(state);
-	}
-
-	
-	// reconstruct path.
-	if (path_found) {
-		var path = [state];
-		var elem = dict[`${state.x},${state.y}`];
-		while (elem != null) {
-			path.push(elem);	
-			elem = dict[`${elem.x},${elem.y}`];
-		}
-		return path;
 	}
 
 	return [];
 }
 
+/**
+ * Reconstruct path procedure.
+ * @state: goal state discovered using DFS.
+ * @previous_node: edges
+ */
+function reconstructPath(state, previous_node) {
+	var path = [state];
+	var elem = previous_node[`${state.x},${state.y}`];
+	while (elem != null) {
+		path.push(elem);	
+		elem = previous_node[`${elem.x},${elem.y}`];
+	}
 
-
+	return path;
+}
