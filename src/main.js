@@ -48,13 +48,8 @@ GameInstanceManager.prototype.addGameInstance = function(gameInfo) {
 
 GameInstanceManager.prototype.removeGameInstance = function(gameAddress) {
 
+
 }
-
-
-
-
-
-
 
 var gameFactory = new GameInstanceManager(gameFactoryAddress);
 var currentGameInstance = null;
@@ -111,35 +106,27 @@ GameInstance.prototype.placePiece = function(pieceLocation) {
  */
 GameInstance.prototype.swapColors = function() {
 
-
 }
 
 /**
  * Process board click. 
  */ 
 GameInstance.prototype.onBoardClick = function(pieceLocation) {
+	this.board.setCell(pieceLocation, this.color);
+	updateView(pieceLocation, this.color);
+	var path = findPath(this.board, this.color);
+	
 
-}
+	console.log(path);
+	if (path.length != 0) {
 
-// SVG click event listener
-function click(e) {
-	var color = '#eaedf2';
-	console.log(this.id);
-	var pieceColor = currentGameInstance.color;
-	console.log(pieceColor);
-	if (pieceColor == PieceColor.RED) color = "#bc492f"
-	if (pieceColor == PieceColor.BLU) color = "#2f56bc"
-	this.setAttributeNS(null, 'fill', color);
-	var nums = this.id.split(',');
-	var obj = { x: parseInt(nums[0]), y: parseInt(nums[1]) };
-	currentGameInstance.board.setCell(obj, currentGameInstance.color);
-	var path = findPath(currentGameInstance.board, currentGameInstance.color);
-
-		console.log("here");
-	for (var i = 0; i < path.length; i++) {
-		var elem = document.getElementById(`${path[i].x},${path[i].y}`);
-		elem.setAttributeNS(null, 'fill', 'red');
+		pathToSolidityArray(this.board, path, this.color);
+		path.forEach(e => {
+			var cell = document.getElementById(`${e.x},${e.y}`);
+			cell.setAttributeNS(null, 'fill', 'green');
+		});
 	}
 }
+
 
 initializeView();

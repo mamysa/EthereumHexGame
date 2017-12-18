@@ -94,9 +94,9 @@ function SVGBoardSetColor(x, y, pieceColor) {
 	cell.setAttributeNS(null, 'fill', color);
 }
 
-
+var svg;
 function initializeView() {
-	var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+	svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
 	svg.setAttributeNS(null,"id","svgDoc");
 	svg.setAttributeNS(null,"height","100%");
 	svg.setAttributeNS(null,"width","100%");
@@ -106,4 +106,24 @@ function initializeView() {
 	var board = new Board();
 	var boardSvg = getSVGBoard();
 	svg.appendChild(boardSvg);
+}
+
+
+/**
+ * click event handler
+ */
+function click(e) {
+	var nums = this.id.split(',');
+	var obj = { x: parseInt(nums[0]), y: parseInt(nums[1]) };
+	currentGameInstance.onBoardClick(obj);
+}
+
+/**
+ * updateView
+ */
+function updateView(loc, pieceColor) {
+	var cell = document.getElementById(`${loc.x},${loc.y}`);
+	if (pieceColor == PieceColor.RED) color = "#bc492f"
+	if (pieceColor == PieceColor.BLU) color = "#2f56bc"
+	cell.setAttributeNS(null, 'fill', color);
 }
