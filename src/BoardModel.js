@@ -1,14 +1,14 @@
 var CellType = {
-	ALL: 1,
-	REDTARGET: 2,
-	BLUTARGET: 3,
-	ANYTARGET: 4
+	ALL: 0,
+	REDTARGET: 1,
+	BLUTARGET: 2,
+	ANYTARGET: 3
 };
 
 var PieceColor = {
-	RED: 1,
-	BLU: 2,
-	UNOCCUPIED: 3
+	RED: 0,
+	BLU: 1,
+	UNOCCUPIED: 2
 };
 
 
@@ -50,7 +50,7 @@ function Board() {
 	this.board[(BOARD_SIZE-1)*BOARD_SIZE].type = CellType.ANYTARGET;
 	this.board[(BOARD_SIZE-1)*BOARD_SIZE+BOARD_SIZE-1].type = CellType.ANYTARGET; 
 
-	console.log(this.getNeighbours({x: 0, y: 1}));
+	//console.log(this.getNeighbours({x: 0, y: 1}));
 }
 
 Board.prototype.indexOf = function(c) {
@@ -202,6 +202,7 @@ function pathToSolidityArray(board, path, color) {
 		throw "VALIDATION FAILED!";
 	}
 
+	console.log("VALIDATION_SUCCESS!");
 }
 
 
@@ -237,7 +238,6 @@ function verifyPath(color, positions, gameField) {
 
 	return true;
 }
-
 
 function checkValidPossiblePath(positions, color, gameField) {
 	var is_valid = true;

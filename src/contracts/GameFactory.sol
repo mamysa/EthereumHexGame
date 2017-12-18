@@ -179,7 +179,7 @@ contract HexGameInstance {
 		}
 	}
 
-	function swapPieceColor() checkValidSwap() public {
+	function swapPieceColor(uint movenum) checkValidSwap(movenum) public {
 		playerColor[players[0]] = PieceColor.BLU;
 		playerColor[players[1]] = PieceColor.RED;
 		onPieceSwapped(moveNumber);
@@ -214,9 +214,10 @@ contract HexGameInstance {
 
 	// (1) Ensure that move is made by the person that we expect;
 	// (2) Ensure that swap move can be only made on the second move.
-	modifier checkValidSwap() {
+	modifier checkValidSwap(uint movenum) {
 		require(msg.sender == players[turn]);
 		require(moveNumber == 1);
+		require(movenum == moveNumber);
 		_;
 	}
 
