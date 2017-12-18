@@ -127,16 +127,16 @@ contract HexGameInstance {
 			gameField[y][x] = Cell(PieceColor.NONE, CellType.ALL);
 		}
 
-		// red targets are oriented horizontally.
+		// blue targets are oriented horizontally.
 		for (x = 0; x < BOARD_SIZE; x++) {
-			gameField[0][x].target = CellType.REDTARGET;
-			gameField[b][x].target = CellType.REDTARGET;
+			gameField[0][x].target = CellType.BLUTARGET;
+			gameField[b][x].target = CellType.BLUTARGET;
 		}
 
-		// blue targets are oriented vertically.
+		// red targets are oriented vertically.
 		for (y = 0; y < BOARD_SIZE; y++) {
-			gameField[y][0].target = CellType.BLUTARGET;
-			gameField[y][b].target = CellType.BLUTARGET;
+			gameField[y][0].target = CellType.REDTARGET;
+			gameField[y][b].target = CellType.REDTARGET;
 		}
 
 		// set corners of the board as target for any player
@@ -223,8 +223,8 @@ contract HexGameInstance {
 	/**
 	 * Ensure that first and last elements of the path are appropriate targets. 
 	 * positions array is expected to have length greater than 0 and have even number elements, 2 per cell coordinate.
-	 * Red targets are oriented horizontally, so any x is valid but only y = 0 and y = 10 are valid.
-	 * Blu targets are oriented vertically, so only x = 0 and x = 10 are valid and any y is valid.
+	 * Red targets are oriented vertically, so any x is valid but only y = 0 and y = 10 are valid.
+	 * Blu targets are oriented horizontally, so only x = 0 and x = 10 are valid and any y is valid.
 	 */
 	modifier checkValidPossiblePath(uint[] positions, PieceColor color) {
 		require(positions.length > 0);
@@ -232,11 +232,11 @@ contract HexGameInstance {
 		require(compareTargetColor(positions[0], positions[1], color));
 		require(compareTargetColor(positions[positions.length-2], positions[positions.length-1], color));
 
-		if (color == PieceColor.RED) {
-			require(positions[1] == 0 && positions[positions.length-1] == BOARD_SIZE-1);
-		}
 		if (color == PieceColor.BLU) {
-			require(positions[0] == 0 && positions[positions.length-2] == BOARD_SIZE-1);
+			require(positions[1] == BOARD_SIZE-1 && positions[positions.length-1] == 0);
+		}
+		if (color == PieceColor.RED) {
+			require(positions[0] == BOARD_SIZE-1 && positions[positions.length-2] == 0);
 		}
 		_;
 	}
