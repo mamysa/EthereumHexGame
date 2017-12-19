@@ -5,7 +5,6 @@ else {
 	web3 = new Web3( new Web3.providers.HttpProvider("http://localhost:8545") );
 }
 
-
 var currentAccount = '';
 
 setInterval( function() {
@@ -14,8 +13,10 @@ setInterval( function() {
 	if (currentAccount != account) {
 		currentAccount = account;
 		console.log(currentAccount);
-
+		gameFactory.reset();
+		resetView();
 		web3.eth.defaultAccount = web3.eth.accounts[0];
+
 
 	}
 }, 1000);
@@ -33,6 +34,15 @@ function GameInstanceManager(gameFactoryAddress) {
 			}
 		});
 	}, 5000);
+}
+
+/**
+ * Reset state when user switches wallets. Do this to prevent inconsistent 
+ * GameInstances.
+ */
+GameInstanceManager.prototype.reset = function() {
+	currentGameInstance = null;
+	this.gameInstanceMap = { };
 }
 
 
@@ -60,12 +70,18 @@ function GameInstance(gameInstanceAddress, player1Address, player2Address) {
 	this.address = gameInstanceAddress;
 	this.instance = loadContract(gameInstanceAddress, gameInstanceABI);
 
-	this.setTile = {x: -1, y: -1 };
+	// stores currently selected cell.
+	this.selectedCell = null;
+
+	// path that we have discovered using DFS.
+	this.possibleWinningPath = null;
 
 	this.players = [ ];
 	this.board = new Board();
-	this.color = PieceColor.RED;
 	this.moveNumber = 0;
+
+		
+	this.winner = '';
 
 	var self = this;
 	this.instance.allEvents( { fromBlock: '0' }, function(err,result) {
@@ -81,29 +97,60 @@ function GameInstance(gameInstanceAddress, player1Address, player2Address) {
 
 GameInstance.prototype.processEvent = function(result) {
 	console.log(result);
+	var args = result.args;
 	if (result.event == 'onGameStarted') {
-		//this.players.push( { player: result.args.p1, color: 
-		var player1 = result.args.p1;
-		var player2 = result.args.p2;
-		var player1color = result.args.p1color.toNumber();
-		var player2color = result.args.p2color.toNumber();
+		var player1 = args.p1;
+		var player2 = args.p2;
+		var player1color = args.p1color.toNumber();
+		var player2color = args.p2color.toNumber();
 		this.players.push({ player: player1, color: player1color });
 		this.players.push({ player: player2, color: player2color });
-		console.log(this.players);
+	}
+
+	if (result.event == 'onPiecePlaced') {
+		var x = args.x.toNumber();
+		var y = args.y.toNumber();
+		var player = args.player;
+		var color = args.pieceColor.toNumber();
+		var movenum = args.movenum.toNumber();
+
+		console.log(x, y, player, color, movenum);
+
+		var cell = { x: x, y: y };
+		updateView(cell, color);
+		this.board.setCell(cell, color);
+		this.moveNumber = movenum + 1;
+	}
+
+	if (result.event == 'onPieceSwapped') {
+		var movenum = args.movenum.toNumber();
+		this.players[0].color = PieceColor.BLU;
+		this.players[1].color = PieceColor.RED;
+		this.moveNumber = movenum + 1;
+	}
+
+	if (result.event == 'onGameEnded') {
+		this.winner = args.winner;	
 	}
 }
 
-GameInstance.prototype.myTurn = function() {
+GameInstance.prototype.isMyTurn = function() {
 	return (currentAccount == this.players[this.moveNumber % 2].player);
+}
+
+GameInstance.prototype.getMyColor = function() {
+	if (currentAccount == this.players[0].player) { return this.players[0].color; }
+	if (currentAccount == this.players[1].player) { return this.players[1].color; }
+	return PieceColor.UNOCCUPIED;
 }
 
 /**
  * Fire transaction when user places the piece
  */
-GameInstance.prototype.placePiece = function(pieceLocation) {
+GameInstance.prototype.placePiece = function(pieceLocation, color) {
 	var x = web3.toBigNumber(pieceLocation.x);	
 	var y = web3.toBigNumber(pieceLocation.y);	
-	var p = web3.toBigNumber(this.color);
+	var p = web3.toBigNumber(color);
 	var m = web3.toBigNumber(this.moveNumber);
 	console.log("here");
 	this.instance.placePiece(x, y, p, m, { }, function(err, result){
@@ -114,13 +161,13 @@ GameInstance.prototype.placePiece = function(pieceLocation) {
 		if (result) {
 			console.log(result);
 		}
-	});
+	});dat.gui.js
 }
 
 /**
  * call placePieceAndCheckWinningCondition.
  */
-GameInstance.prototype.placePieceAndCheckWinningCondition = function(pieceLocation, path) {
+GameInstance.prototype.placePieceAndCheckWinningCondition = function(pieceLocation, color, path) {
 	var a = [];
 	for (var i = 0; i < path.length; i++) {
 		a.push(web3.toBigNumber(path[i].x));
@@ -128,7 +175,7 @@ GameInstance.prototype.placePieceAndCheckWinningCondition = function(pieceLocati
 	}
 	var x = web3.toBigNumber(pieceLocation.x);	
 	var y = web3.toBigNumber(pieceLocation.y);	
-	var p = web3.toBigNumber(this.color);
+	var p = web3.toBigNumber(color);
 	var m = web3.toBigNumber(this.moveNumber);
 
 	this.instance.placePieceAndCheckWinningCondition(x, y, p, m, a, { }, function(err, result) {
@@ -163,22 +210,50 @@ GameInstance.prototype.swapPieceColor = function() {
  * Process board click. 
  */ 
 GameInstance.prototype.onBoardClick = function(pieceLocation) {
-	if (!this.myTurn()) {
-		console.log("Not my turn!");
+	if (!this.isMyTurn()) {
+		console.log('Not my turn');
 		return;
 	}
 
-	this.board.setCell(pieceLocation, this.color);
-	updateView(pieceLocation, this.color);
-	var path = findPath(this.board, this.color);
+	var color = this.getMyColor();
 
-	if (path.length == 0) {
-		this.placePiece(pieceLocation);	
+	// reset selectedCell
+	if (this.selectedCell != null) {
+		this.board.setCell(this.selectedCell, PieceColor.UNOCCUPIED);
+		updateView(this.selectedCell, PieceColor.UNOCCUPIED);
+		this.selectedCell = null;
+	}
+		
+	if (this.board.getCell(pieceLocation) == PieceColor.UNOCCUPIED) {
+		this.board.setCell(pieceLocation, color);
+		updateView(pieceLocation, color);
+		this.selectedCell = pieceLocation;
+	}
+}
+
+GameInstance.prototype.onPlacePieceClick = function() {
+	if (this.selectedCell == null) {
+		console.log('Select piece first!');
+		return;
 	}
 
-	// looks like we have found a path, can call placePieceandCheckWinningCondition.
+	var color = this.getMyColor();
+	var path = findPath(this.board, color); 
+
+	if (path.length == 0) {
+		this.placePiece(this.selectedCell, color);
+	}
 	if (path.length != 0) {
-		this.placePieceAndCheckWinningCondition(pieceLocation, path);	
+		this.placePieceAndCheckWinningCondition(this.selectedCell, color, path);
+	}
+
+	this.selectedCell = null;
+}
+
+
+function onPlacePiecePressed() {
+	if (currentGameInstance != null) {
+		currentGameInstance.onPlacePieceClick();
 	}
 }
 

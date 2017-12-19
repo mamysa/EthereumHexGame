@@ -123,7 +123,17 @@ function click(e) {
  */
 function updateView(loc, pieceColor) {
 	var cell = document.getElementById(`${loc.x},${loc.y}`);
+	var color = '#eaedf2';
 	if (pieceColor == PieceColor.RED) color = "#bc492f"
 	if (pieceColor == PieceColor.BLU) color = "#2f56bc"
 	cell.setAttributeNS(null, 'fill', color);
+}
+
+function resetView() {
+	for (var y = 0; y < BOARD_SIZE; y++) 
+	for (var x = 0; x < BOARD_SIZE; x++)  {
+		var cell = document.getElementById(`${x},${y}`);
+		cell.setAttributeNS(null, 'fill', '#eaedf2');
+	}
+
 }
