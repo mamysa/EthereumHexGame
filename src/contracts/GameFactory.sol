@@ -194,6 +194,11 @@ contract HexGameInstance {
 				return;
 			}
 		}
+
+		// otherwise player wins the game
+		onGameEnded(msg.sender);	
+		parentContract.endGame(this, players[0], players[1]);
+		selfdestruct(msg.sender);
 	}
 
 	function swapPieceColor(uint movenum) checkValidSwap(movenum) public {
@@ -206,7 +211,7 @@ contract HexGameInstance {
 	/**
 	 * Kill contract. If player chooses to end game, he loses the game. 
 	 */
-	function endGame() public {
+	function endGame() checkEndGame() public {
 		uint8 n = (turn + 1) % 2;
 		onGameEnded(players[n]);
 		parentContract.endGame(this, players[0], players[1]);
