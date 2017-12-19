@@ -207,6 +207,22 @@ GameInstance.prototype.swapPieceColor = function() {
 }
 
 /**
+ * Player can choose to end the game at any time. Person ending the game will lose the 
+ * round!
+ */
+GameInstance.prototype.forfeit = function() {
+	this.instance.endGame({from: currentAccount}, function(err, result) {
+		if (err) {
+			console.log(err);
+		}
+		if (result) {
+			console.log(result);
+		}
+	});
+}
+
+
+/**
  * Process board click. 
  */ 
 GameInstance.prototype.onBoardClick = function(pieceLocation) {
@@ -251,9 +267,16 @@ GameInstance.prototype.onPlacePieceClick = function() {
 }
 
 
+
 function onPlacePiecePressed() {
 	if (currentGameInstance != null) {
 		currentGameInstance.onPlacePieceClick();
+	}
+}
+
+function onForfeitPressed() {
+	if (currentGameInstance != null) {
+		currentGameInstance.forfeit();
 	}
 }
 
