@@ -280,4 +280,32 @@ function onForfeitPressed() {
 	}
 }
 
+
+
+function createTableEntry(gameAddress, player1, player2) {
+	var tr = document.createElement('tr');	
+	var td1 = document.createElement('td');
+	var td2 = document.createElement('td');
+	var td3 = document.createElement('td');
+	var td4 = document.createElement('td');
+	var button = document.createElement('button');
+	button.classList.add('pure-button');
+	button.classList.add('pure-button-primary');
+	button.innerHTML = 'Open';
+	td1.innerHTML = gameAddress;
+	td2.innerHTML = player1;
+	td3.innerHTML = player2;
+
+	td4.appendChild(button);
+	tr.appendChild(td1);
+	tr.appendChild(td2);
+	tr.appendChild(td3);
+	tr.appendChild(td4);
+
+	document.getElementById('table_body').appendChild(tr);
+}
+
+
+
+
 initializeView();

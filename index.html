@@ -1,18 +1,83 @@
 <html>
 	<head>
 		<script src="/parity-utils/inject.js"></script>
+		<link rel="stylesheet" href="https://unpkg.com/purecss@1.0.0/build/pure-min.css" integrity="sha384-nn4HPE8lTHyVtfCBi5yW9d20FjT8BJwUXyWZT9InLYax14RDjBj46LmSztkmNP9w" crossorigin="anonymous">
+		
+
+
+	<style>
+		.button-container {
+			text-align: center;
+			padding:20px;
+			background-color: #f7d7cf;
+		}
+
+		.button-error {
+            background: rgb(202, 60, 60); /* this is a maroon */
+        }
+
+		.button-large {
+            font-size: 120%;
+        }
+
+		.table-container {
+			background-color: #f7d7cf;
+			width: 70%;
+			margin: 0 auto;
+			display:block;
+		}
+		
+
+
+	</style>
+
 	</head>
+
+
 	<body> 
 		<script type="text/javascript" src=src/abi.js></script>
 		<script type="text/javascript" src=src/BoardModel.js></script>
 		<script type="text/javascript" src=src/BoardView.js></script>
 		<script type="text/javascript" src=src/main.js></script>
 
+		<div class="pure-u-5-5 button-container">
 		
-		<button type="button" onclick="startGame()">Start Game</button>
-		<button type="button" onclick="endGame()">End Game</button>
-		<button type="button" onclick="onPlacePiecePressed()">Place</button>
-		<button type="button" onclick="onForfeitPressed()">Forfeit</button>
+			<button type="button" onclick="startGame()">Start Game</button>
+			<button type="button" onclick="createTableEntry('122','121','2455')">End Game</button>
+
+			<button type="button" 
+					class="pure-button pure-button-primary button-large" 
+					onclick="onPlacePiecePressed()">Place</button>
+
+			<button type="button" 
+				class="pure-button pure-button-primary button-error button-large"	
+				onclick="onForfeitPressed()">Forfeit</button>
+		</div>
+
+		<div class="pure-u-5-5 table-container">
+			<table class="pure-table pure-table-horizontal" style="display:inline-block;">
+				 <thead>
+					<tr>
+						<th>Game Address</th>
+						<th>Player 1 </th>
+						<th>Player 2</th>
+						<th> </th>
+					</tr>
+				</thead>
+				<tbody id="table_body"> 
+					<tr>
+						<td>Game Address</td>
+						<td>Player 1 </td>
+						<td>Player 2</td>
+						<td><button> adasasdas</button> </td>
+					</tr>
+				</tbody>
+
+			</table>
+
+		</div>
+
+
 		<script src="bundle.js"></script>
 	</body>
 </html>
