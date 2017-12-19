@@ -74,16 +74,14 @@ contract GameFactory {
 	}
 }
 
-
 contract HexGameInstance {
 	
 	enum PieceColor { RED, BLU, NONE }
 	enum CellType { ALL, REDTARGET, BLUTARGET, ANYTARGET }
 
 	// Represents cell of the game field. 
-	// TODO CellType?
-	//It can be occupied by a piece of some color (i.e. PieceColor.RED, PieceColor.BLU).
-	//It can also be empty (i.e. PieceColor.NONE)
+	// It can be occupied by a piece of some color (i.e. PieceColor.RED, PieceColor.BLU).
+	// It can also be empty (i.e. PieceColor.NONE)
 	struct Cell {
 		PieceColor piece;
 		CellType target;
@@ -109,6 +107,7 @@ contract HexGameInstance {
 
 	event onGameStarted(address gameInstance, address p1, PieceColor p1color, address p2, PieceColor p2color);
 	event onGameEnded(address winner);
+	event onGameEndedBadWinningPath(address winner);
 	event onPiecePlaced(uint x, uint y, PieceColor pieceColor, address player, uint movenum);
 	event onPieceSwapped(uint movenum);
 	
@@ -149,12 +148,28 @@ contract HexGameInstance {
 					        players[1], playerColor[players[1]]);
 	}
 
+	/**
+	 * Place piece of given color at given (x,y) coordinates.
+	 */
 	function placePiece(uint x, uint y, PieceColor color, uint movenum) checkValidPiecePlacement(x, y, color, movenum) public {
 		gameField[y][x].piece = color;
 		onPiecePlaced(x, y, color, msg.sender, moveNumber);
 		nextMove();
 	}
 
+	/**
+	 * This function is called only when we are sure a player has winning path.
+	 * Such path is expected to be laid out in a very specific way. 
+	 * positions array stores cell positions, where positions[i] is x and positions[i+1] is y.
+	 * (1) Must start and begin with REDTARGET or ANYTARGET.
+	 * (2) Since RED targets are oriented vertically, position[0] is expected to be BOARD_SIZE-1
+	 * and position[position.length-2] is expected to be 0. Same goes for BLU pieces, only for the y axis.
+	 * (3) All cells are expected to have valid coordinates.
+	 * (4) All cells are expected to be of appropriate color.
+	 * (5) All cells are expected to have neighbours that make reaching goal state possible.
+	 * If any of these conditions fail, we end the game, assume that message sender is trying to cheat and let the other
+	 * player win.
+	 */
 	function placePieceAndCheckWinningCondition(uint x, uint y, PieceColor color, uint movenum, uint[] positions) 
 	checkValidPiecePlacement(x, y, color, movenum) 
 	checkValidPossiblePath(positions, color)
@@ -163,18 +178,20 @@ contract HexGameInstance {
 
 		uint px = positions[0];
 		uint py = positions[1];
-		if (gameField[py][px].piece != color) {
-			// TODO what do we do here?		
-
+		if (gameField[py][px].piece != color || !validPosition(px, py)) {
+			onGameEndedBadWinningPath(players[turn]);
+			selfdestruct(players[turn]);
+			return;
 		}
 
 		for (uint i = 2; i < positions.length; i+=2) {
 			px = positions[i];
 			py = positions[i+1];
 
-			if (!validPosition(px, py) || !neighbourOf(px, py, positions[i-2], positions[i-1]) || 
-			     gameField[py][px].piece != color) {
-				// TODO game over?	
+			if (!validPosition(px, py) ||  !neighbourOf(px, py, positions[i-2], positions[i-1]) || gameField[py][px].piece != color) {
+				onGameEndedBadWinningPath(players[turn]);
+				selfdestruct(players[turn]);
+				return;
 			}
 		}
 	}
@@ -186,11 +203,14 @@ contract HexGameInstance {
 		nextMove();
 	}
 
-	// kill contract / display win-lose messages to involved parties. 
+	/**
+	 * Kill contract. If player chooses to end game, he loses the game. 
+	 */
 	function endGame() public {
-		onGameEnded(players[0]);
-		//parentContract.endGame(this, players[0], players[1]);
-		selfdestruct(0x0);
+		uint8 n = (turn + 1) % 2;
+		onGameEnded(players[n]);
+		parentContract.endGame(this, players[0], players[1]);
+		selfdestruct(players[n]);
 	}
 
 	// Increment move counter and give turn to the next player.
@@ -243,6 +263,14 @@ contract HexGameInstance {
 	}
 
 	/**
+	 * Ensure than game is being ended by one of the players.
+	 */
+	modifier checkEndGame() {
+		require(msg.sender == players[turn] || msg.sender == players[(turn+1) % 2]);
+		_;
+	}
+
+	/**
 	 * Return true if p1 is a neighbour of p2. p2 should be a valid cell position.
 	 */ 
 	function neighbourOf(uint p1x, uint p1y, uint p2x, uint p2y) private pure returns (bool) {
@@ -270,7 +298,7 @@ contract HexGameInstance {
 	}
 
 	/**
-	 * Returns true if piece color matches target color.
+	 * Returns true if piece color matches target color for some cell (x,y).
 	 */
 	function compareTargetColor(uint x, uint y, PieceColor color) private view returns (bool) {
 		if (color == PieceColor.RED) {
