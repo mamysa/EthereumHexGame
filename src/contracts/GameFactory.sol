@@ -3,28 +3,14 @@ contract GameFactory {
 
 	address owner;
 
-	struct GameInfo {
-		bool    isset;
-		address player1;
-		address player2;
-		address gameInstance;
-	}
-
-
-	// mapping player -> gameinfo mapping.
-
 	// player who is waiting for someone else call startGame()
-	address awaitingPlayer;
-	
-	// currently active games
-	mapping(address => GameInfo) public gameInstances;
+	address waitingPlayer;
 
 	event onGameInstanceCreated(address gameInstance, address p1, address p2);
-	event onGameInstanceDestroyed(address gameInstance, address p1, address p2);
 
 	function GameFactory() public {
 		owner = msg.sender;
-		awaitingPlayer = address(0x0);
+		waitingPlayer = address(0x0);
 	}
 
 	// If address of awaitingPlayer is 0, store msg.sender there.
@@ -33,43 +19,24 @@ contract GameFactory {
 	// In this case, we have to ensure that 
 	// (1) msg.sender != awaitingPlayer; and
 	// (2) liveGames[msg.sender] key exists (i.e. fields of the struct are 0)
-	function startGame() checkUser() public {
-		if (awaitingPlayer == address(0x0)) {
-			awaitingPlayer = msg.sender;
+	function startGame() checkNotWaitingPlayer() public {
+		if (waitingPlayer == address(0x0)) {
+			waitingPlayer = msg.sender;
 		}
 		else {
-			address p1 = awaitingPlayer; 
+			address p1 = waitingPlayer; 
 			address p2 = msg.sender;
-			HexGameInstance game = new HexGameInstance(this, p1, p2);
-			GameInfo memory info = GameInfo(true, p1, p2, game);
-			gameInstances[p1] = info; gameInstances[p2] = info; 
-			awaitingPlayer = address(0x0);
+			waitingPlayer = address(0x0);
+			HexGameInstance game = new HexGameInstance(p1, p2);
 			onGameInstanceCreated(game, p1, p2);
 		}
-	}
-
-	function endGame(address gameInstance, address p1, address p2) checkEndGameCaller(gameInstance, p1, p2) public {
-		onGameInstanceDestroyed(gameInstance, p1, p2);
-		delete gameInstances[p1];
-		delete gameInstances[p2];
 	}
 
 	/*
 	 * Ensure that user is not already waiting / playing the game.
 	 */
-	modifier checkUser() {
-		require(!gameInstances[msg.sender].isset);
-		require(msg.sender != awaitingPlayer);
-		_;
-	}
-
-	/*
-	 * Verify that game can only be ended by someone that we expect.
-	 */
-	modifier checkEndGameCaller(address gameInstance, address p1, address p2) {
-		require(msg.sender == gameInstance);
-		require(gameInstances[p1].gameInstance == gameInstance);
-		require(gameInstances[p2].gameInstance == gameInstance);
+	modifier checkNotWaitingPlayer() {
+		require(msg.sender != waitingPlayer);
 		_;
 	}
 }
@@ -86,9 +53,6 @@ contract HexGameInstance {
 		PieceColor piece;
 		CellType target;
 	}
-
-	// parent contract that we will call once game is over.
-	GameFactory parentContract;
 
 	// mapping of player to piece color. Also store player addresses in separate array.
 	mapping(address => PieceColor) public playerColor;
@@ -111,8 +75,7 @@ contract HexGameInstance {
 	event onPiecePlaced(uint x, uint y, PieceColor pieceColor, address player, uint movenum);
 	event onPieceSwapped(uint movenum);
 	
-	function HexGameInstance(GameFactory _parentContract, address _player1, address _player2) public {
-		parentContract = _parentContract;
+	function HexGameInstance(address _player1, address _player2) public {
 		players[0] = _player1; playerColor[players[0]] = PieceColor.RED;
 		players[1] = _player2; playerColor[players[1]] = PieceColor.BLU;
 		
@@ -197,7 +160,6 @@ contract HexGameInstance {
 
 		// otherwise player wins the game
 		onGameEnded(msg.sender);	
-		parentContract.endGame(this, players[0], players[1]);
 		selfdestruct(msg.sender);
 	}
 
@@ -214,7 +176,6 @@ contract HexGameInstance {
 	function endGame() checkEndGame() public {
 		uint8 n = (turn + 1) % 2;
 		onGameEnded(players[n]);
-		parentContract.endGame(this, players[0], players[1]);
 		selfdestruct(players[n]);
 	}
 
