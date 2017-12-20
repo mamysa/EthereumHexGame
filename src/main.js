@@ -65,6 +65,8 @@ GameInstanceManager.prototype.addGameInstance = function(gameInstanceAddress, p1
 
 GameInstanceManager.prototype.setCurrentGameInstance = function(gameAddress) {
 	this.currentGameInstance = this.gameInstanceMap[gameAddress];
+	this.currentGameInstance.setDrawable(true);
+	this.currentGameInstance.draw();
 }
 
 GameInstanceManager.prototype.getCurrentGameInstance = function() {
@@ -90,9 +92,11 @@ function GameInstance(gameInstanceAddress, player1Address, player2Address) {
 		
 	this.winner = '';
 
+	this.isDrawable = false;
+
 	var self = this;
+
 	this.instance.allEvents( { fromBlock: '0' }, function(err,result) {
-		console.log("Contract Event:");
 		if (err) {
 			console.log("event error");
 		}
@@ -100,6 +104,24 @@ function GameInstance(gameInstanceAddress, player1Address, player2Address) {
 			self.processEvent(result);
 		}
 	});
+}
+
+/**
+ * If false, all calls to update updateView will not be executed.
+ */
+GameInstance.prototype.setDrawable = function(value) {
+	this.isDrawable = value;
+}
+
+/**
+ * Redraw board from local state
+ */
+GameInstance.prototype.draw = function() {
+	for (x = 0; x < BOARD_SIZE; x++)
+	for (y = 0; y < BOARD_SIZE; y++) {
+		var loc = {x: x, y: y};
+		updateView(loc, this.board.getCell(loc));
+	}
 }
 
 GameInstance.prototype.processEvent = function(result) {
@@ -124,7 +146,8 @@ GameInstance.prototype.processEvent = function(result) {
 		console.log(x, y, player, color, movenum);
 
 		var cell = { x: x, y: y };
-		updateView(cell, color);
+		if (this.isDrawable) 
+			updateView(cell, color);
 		this.board.setCell(cell, color);
 		this.moveNumber = movenum + 1;
 	}
@@ -168,7 +191,7 @@ GameInstance.prototype.placePiece = function(pieceLocation, color) {
 		if (result) {
 			console.log(result);
 		}
-	});dat.gui.js
+	});
 }
 
 /**
@@ -243,13 +266,15 @@ GameInstance.prototype.onBoardClick = function(pieceLocation) {
 	// reset selectedCell
 	if (this.selectedCell != null) {
 		this.board.setCell(this.selectedCell, PieceColor.UNOCCUPIED);
-		updateView(this.selectedCell, PieceColor.UNOCCUPIED);
+		if (this.isDrawable) 
+			updateView(this.selectedCell, PieceColor.UNOCCUPIED);
 		this.selectedCell = null;
 	}
 		
 	if (this.board.getCell(pieceLocation) == PieceColor.UNOCCUPIED) {
 		this.board.setCell(pieceLocation, color);
-		updateView(pieceLocation, color);
+		if (this.isDrawable) 
+			updateView(pieceLocation, color);
 		this.selectedCell = pieceLocation;
 	}
 }
@@ -274,24 +299,23 @@ GameInstance.prototype.onPlacePieceClick = function() {
 }
 
 
-
 function onPlacePiecePressed() {
-	if (currentGameInstance.getCurrentGameInstance() != null) {
+	var currentGameInstance = gameFactory.getCurrentGameInstance();
+	if (currentGameInstance != null) {
 		currentGameInstance.onPlacePieceClick();
 	}
 }
 
 function onForfeitPressed() {
-	if (GameInstanceManager.getCurrentGameInstance() != null) {
+	var currentGameInstance = gameFactory.getCurrentGameInstance();
+	if (currentGameInstance != null) {
 		currentGameInstance.forfeit();
 	}
 }
 
 function onOpenPressed() {
-	this.fac
+	gameFactory.setCurrentGameInstance(this.id);
 }
-
-
 
 function createTableEntry(gameAddress, player1, player2) {
 	var tr = document.createElement('tr');	
@@ -303,6 +327,8 @@ function createTableEntry(gameAddress, player1, player2) {
 	button.classList.add('pure-button');
 	button.classList.add('pure-button-primary');
 	button.innerHTML = 'Open';
+	button.addEventListener('click', onOpenPressed);
+	button.id = gameAddress;
 	td1.innerHTML = gameAddress;
 	td2.innerHTML = player1;
 	td3.innerHTML = player2;

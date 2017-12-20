@@ -115,7 +115,11 @@ function initializeView() {
 function click(e) {
 	var nums = this.id.split(',');
 	var obj = { x: parseInt(nums[0]), y: parseInt(nums[1]) };
-	currentGameInstance.onBoardClick(obj);
+
+	var currentGameInstance = gameFactory.getCurrentGameInstance();
+	if (currentGameInstance != null) {
+		currentGameInstance.onBoardClick(obj);
+	}
 }
 
 /**
@@ -135,5 +139,4 @@ function resetView() {
 		var cell = document.getElementById(`${x},${y}`);
 		cell.setAttributeNS(null, 'fill', '#eaedf2');
 	}
-
 }
