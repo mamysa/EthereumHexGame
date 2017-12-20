@@ -9,31 +9,19 @@ var currentAccount = '';
 
 setInterval( function() {
 	var account = web3.eth.accounts[0];
-
 	if (currentAccount != account) {
 		currentAccount = account;
 		console.log(currentAccount);
 		gameFactory.reset();
 		resetView();
-		web3.eth.defaultAccount = web3.eth.accounts[0];
-
-
 	}
 }, 1000);
 
 
 function GameInstanceManager(gameFactoryAddress) {
-	var self = this;
 	this.gameFactory = loadContract(gameFactoryAddress, gameFactoryABI);
 	this.gameInstanceMap = { };
-
-	setInterval( function() {
-		self.gameFactory.gameInstances(currentAccount, function(err, result) {
-			if (!err && result[0]) {
-				self.addGameInstance(result);	
-			}
-		});
-	}, 5000);
+	this.currentGameInstance = null;
 }
 
 /**
@@ -41,30 +29,49 @@ function GameInstanceManager(gameFactoryAddress) {
  * GameInstances.
  */
 GameInstanceManager.prototype.reset = function() {
-	currentGameInstance = null;
+	this.currentGameInstance = null;
 	this.gameInstanceMap = { };
+
+	// update view 
+	var table = document.getElementById('game_table');
+	var tbody = document.createElement('tbody'); tbody.id = 'table_body';
+	table.removeChild(document.getElementById('table_body'));
+	table.appendChild(tbody);
+
+	var self = this;
+	this.gameFactory.allEvents( { fromBlock: '0' }, function(err,result) {
+		var args = result.args;
+		if (result.event == 'onGameInstanceCreated') {
+			if (currentAccount == args.p1 || currentAccount == args.p2) {
+				self.addGameInstance(args.gameInstance, args.p1, args.p2);
+
+				//TODO maybe store in local storage?
+			}
+		}
+	});
 }
 
-
-GameInstanceManager.prototype.addGameInstance = function(gameInfo) {
-	var gameInstanceAddress = gameInfo[3];	
-	var p1Address = gameInfo[1];	
-	var p2Address = gameInfo[2];	
-
+GameInstanceManager.prototype.addGameInstance = function(gameInstanceAddress, p1, p2) {
+	console.log("hererere");
 	if (!(gameInstanceAddress in this.gameInstanceMap)) { 
-		var instance = new GameInstance(gameInstanceAddress, p1Address, p2Address);
+		console.log("add game instance");
+		var instance = new GameInstance(gameInstanceAddress, p1, p2);
 		this.gameInstanceMap[gameInstanceAddress] = instance;
-		currentGameInstance = instance; 
+
+		// update view
+		createTableEntry(gameInstanceAddress, p1, p2);
 	}
 }
 
-GameInstanceManager.prototype.removeGameInstance = function(gameAddress) {
+GameInstanceManager.prototype.setCurrentGameInstance = function(gameAddress) {
+	this.currentGameInstance = this.gameInstanceMap[gameAddress];
+}
 
-
+GameInstanceManager.prototype.getCurrentGameInstance = function() {
+	return this.currentGameInstance;
 }
 
 var gameFactory = new GameInstanceManager(gameFactoryAddress);
-var currentGameInstance = null;
 
 function GameInstance(gameInstanceAddress, player1Address, player2Address) {
 	this.address = gameInstanceAddress;
@@ -269,15 +276,19 @@ GameInstance.prototype.onPlacePieceClick = function() {
 
 
 function onPlacePiecePressed() {
-	if (currentGameInstance != null) {
+	if (currentGameInstance.getCurrentGameInstance() != null) {
 		currentGameInstance.onPlacePieceClick();
 	}
 }
 
 function onForfeitPressed() {
-	if (currentGameInstance != null) {
+	if (GameInstanceManager.getCurrentGameInstance() != null) {
 		currentGameInstance.forfeit();
 	}
+}
+
+function onOpenPressed() {
+	this.fac
 }
 
 
