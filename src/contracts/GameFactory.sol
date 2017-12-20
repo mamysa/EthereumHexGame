@@ -1,12 +1,15 @@
-pragma solidity ^0.4.0;
+pragma solidity ^0.4.17;
 contract GameFactory {
 
 	address owner;
 
 	// player who is waiting for someone else call startGame()
-	address waitingPlayer;
+	address public waitingPlayer;
 
 	event onGameInstanceCreated(address gameInstance, address p1, address p2);
+	event onPlayerWaiting(address waitingPlayer);
+	event onStartGameCalled(address addr);
+
 
 	function GameFactory() public {
 		owner = msg.sender;
@@ -22,6 +25,7 @@ contract GameFactory {
 	function startGame() checkNotWaitingPlayer() public {
 		if (waitingPlayer == address(0x0)) {
 			waitingPlayer = msg.sender;
+			onPlayerWaiting(waitingPlayer);
 		}
 		else {
 			address p1 = waitingPlayer; 
@@ -30,6 +34,8 @@ contract GameFactory {
 			HexGameInstance game = new HexGameInstance(p1, p2);
 			onGameInstanceCreated(game, p1, p2);
 		}
+		
+		onStartGameCalled(msg.sender);
 	}
 
 	/*
@@ -43,20 +49,20 @@ contract GameFactory {
 
 contract HexGameInstance {
 	
-	enum PieceColor { RED, BLU, NONE }
+	enum PieceColor { UNOCCUPIED, RED, BLU }
 	enum CellType { ALL, REDTARGET, BLUTARGET, ANYTARGET }
-
-	// Represents cell of the game field. 
-	// It can be occupied by a piece of some color (i.e. PieceColor.RED, PieceColor.BLU).
-	// It can also be empty (i.e. PieceColor.NONE)
-	struct Cell {
-		PieceColor piece;
-		CellType target;
-	}
 
 	// mapping of player to piece color. Also store player addresses in separate array.
 	mapping(address => PieceColor) public playerColor;
-	address[2] players;
+
+	// list of players
+	address[2] public players;
+
+	// game board mapping
+	mapping (uint => mapping(uint => PieceColor)) public board;
+
+	// game board dimensions
+	uint constant BOARD_SIZE = 11;
 
 	// index of the player who has the next turn. _player1 if 0, _player2 if 1 
 	uint8 turn;
@@ -64,11 +70,7 @@ contract HexGameInstance {
 	// number of moves.
 	uint moveNumber;
 
-	uint constant BOARD_SIZE = 11;
-
-	// game board
-	Cell[BOARD_SIZE][BOARD_SIZE] public gameField;
-
+	// all possible events that can be triggered.
 	event onGameStarted(address gameInstance, address p1, PieceColor p1color, address p2, PieceColor p2color);
 	event onGameEnded(address winner);
 	event onGameEndedBadWinningPath(address winner);
@@ -79,69 +81,110 @@ contract HexGameInstance {
 		players[0] = _player1; playerColor[players[0]] = PieceColor.RED;
 		players[1] = _player2; playerColor[players[1]] = PieceColor.BLU;
 		
-		uint x;
-		uint y;
-		uint b = BOARD_SIZE - 1;
-
-		// initialize cells.
-		for (y = 0; y < BOARD_SIZE; y++) 
-		for (x = 0; x < BOARD_SIZE; x++)  {
-			gameField[y][x] = Cell(PieceColor.NONE, CellType.ALL);
-		}
-
-		// blue targets are oriented horizontally.
-		for (x = 0; x < BOARD_SIZE; x++) {
-			gameField[0][x].target = CellType.BLUTARGET;
-			gameField[b][x].target = CellType.BLUTARGET;
-		}
-
-		// red targets are oriented vertically.
-		for (y = 0; y < BOARD_SIZE; y++) {
-			gameField[y][0].target = CellType.REDTARGET;
-			gameField[y][b].target = CellType.REDTARGET;
-		}
-
-		// set corners of the board as target for any player
-		gameField[0][0].target = CellType.ANYTARGET;
-		gameField[0][b].target = CellType.ANYTARGET;
-		gameField[b][0].target = CellType.ANYTARGET;
-		gameField[b][b].target = CellType.ANYTARGET;
-
 		onGameStarted(this, players[0], playerColor[players[0]], 
 					        players[1], playerColor[players[1]]);
 	}
 
-	/**
-	 * Place piece of given color at given (x,y) coordinates.
-	 */
-	function placePiece(uint x, uint y, PieceColor color, uint movenum) checkValidPiecePlacement(x, y, color, movenum) public {
-		gameField[y][x].piece = color;
+//==============================
+// General purpose board queries. 
+//==============================
+
+	// Return the celltype.
+	// For BLU targets are oriented horizontally, so we only only care about y coordinate, any x is valid.
+	// For RED targets are oriented vertically , so we only only care about x coordinate, any y is valid.
+	//  Corners are marked as ANYTARGET
+	function getCellType(uint x, uint y) public pure returns (CellType) {
+		uint b = BOARD_SIZE - 1;
+		if (x == 0 && y == 0) return CellType.ANYTARGET;
+		if (x == b && y == 0) return CellType.ANYTARGET;
+		if (x == 0 && y == b) return CellType.ANYTARGET;
+		if (x == b && y == b) return CellType.ANYTARGET;
+		if (y == 0 || y == b) return CellType.BLUTARGET;
+		if (x == 0 || x == b) return CellType.REDTARGET;
+		return CellType.ANYTARGET;
+	}
+
+	// Return cell's occupying piece color.
+	function getPieceColor(uint x, uint y) public view returns (PieceColor) {
+		return board[y][x];
+	}
+
+	// Return true if coordinate is inside the board.
+	function validCellPosition(uint x, uint y) public pure returns (bool) {
+		return (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE);
+	}
+
+	// Position comparison func
+	function comparePositions(uint p1x, uint p1y, 
+	                          uint p2x, uint p2y) public pure returns (bool) {
+		return (p1x == p2x && p1y == p2y);
+	}
+
+	// Return true if p1 is a neighbour of p2. p2 is expected to be a valid cell position. 
+	function neighbourOf(uint p1x, uint p1y, uint p2x, uint p2y) public pure returns (bool) {
+		if (comparePositions(p1x-1, p1y,   p2x, p2y)) return true; 
+		if (comparePositions(p1x+1, p1y,   p2x, p2y)) return true; 
+		if (comparePositions(p1x,   p1y-1, p2x, p2y)) return true; 
+		if (comparePositions(p1x,   p1y+1, p2x, p2y)) return true; 
+		if (comparePositions(p1x-1, p1y+1, p2x, p2y)) return true; 
+		if (comparePositions(p1x+1, p1y-1, p2x, p2y)) return true; 
+		return false;
+	}
+	
+	// Return true if a given cell is a target for a given piece color. 
+	function isTargetForColor(uint x, uint y, PieceColor color) public pure returns (bool) {
+		CellType t = getCellType(x, y);
+		if (color == PieceColor.RED) return (t == CellType.REDTARGET || t == CellType.ANYTARGET);
+		if (color == PieceColor.BLU) return (t == CellType.BLUTARGET || t == CellType.ANYTARGET);
+		return false;
+	}
+
+//==============================
+// placePiece Implementation.
+//==============================
+
+	// Place piece of given color at given (x,y) coordinate. Call requireValidPlacement first.
+	function placePiece(uint x, uint y, PieceColor color, uint movenum) 
+	checkPiecePlacement(x, y, color, movenum) public {
+		board[y][x] = color;
 		onPiecePlaced(x, y, color, msg.sender, moveNumber);
 		nextMove();
 	}
 
-	/**
-	 * This function is called only when we are sure a player has winning path.
-	 * Such path is expected to be laid out in a very specific way. 
-	 * positions array stores cell positions, where positions[i] is x and positions[i+1] is y.
-	 * (1) Must start and begin with REDTARGET or ANYTARGET.
-	 * (2) Since RED targets are oriented vertically, position[0] is expected to be BOARD_SIZE-1
-	 * and position[position.length-2] is expected to be 0. Same goes for BLU pieces, only for the y axis.
-	 * (3) All cells are expected to have valid coordinates.
-	 * (4) All cells are expected to be of appropriate color.
-	 * (5) All cells are expected to have neighbours that make reaching goal state possible.
-	 * If any of these conditions fail, we end the game, assume that message sender is trying to cheat and let the other
-	 * player win.
-	 */
-	function placePieceAndCheckWinningCondition(uint x, uint y, PieceColor color, uint movenum, uint[] positions) 
-	checkValidPiecePlacement(x, y, color, movenum) 
-	checkValidPossiblePath(positions, color)
+	// (1) Ensure that move is made by the person we expect;
+	// (2) Ensure that that person is not doing insertion outside the board.
+	// (3) Ensure that person is using a piece color that we expect.
+	modifier checkPiecePlacement(uint x, uint y, PieceColor color, uint movenum) {
+		require(movenum == moveNumber);
+		require(msg.sender == players[turn] && playerColor[msg.sender] == color);
+		require(validCellPosition(x, y) && getPieceColor(x, y) == PieceColor.UNOCCUPIED);
+		_;
+	}
+
+//==============================
+// placePieceAndCheckWinningCondition Implementation.
+//==============================
+	// This function is called only when we are sure a player has winning path.
+	// Such path is expected to be laid out in a very specific way. 
+	// positions array stores cell positions, where positions[i] is x and positions[i+1] is y.
+	// (1) Must start and begin with REDTARGET or ANYTARGET.
+	// (2) Since RED targets are oriented vertically, position[0] is expected to be BOARD_SIZE-1
+	// and position[position.length-2] is expected to be 0. Same goes for BLU pieces, only for the y axis.
+	// (3) All cells are expected to have valid coordinates.
+	// (4) All cells are expected to be of appropriate color.
+	// (5) All cells are expected to have neighbours that make reaching goal state possible.
+	// If any of these conditions fail, we end the game, assume that message sender is trying to cheat and let the other
+	// player win.
+	function placePieceAndCheckPath(uint x, uint y, 
+	                                PieceColor color, uint movenum, uint[] positions) 
+	checkPiecePlacement(x, y, color, movenum) 
+	checkPathPreconditions(positions, color)
 	public {
 		placePiece(x, y, color, movenum);
 
 		uint px = positions[0];
 		uint py = positions[1];
-		if (gameField[py][px].piece != color || !validPosition(px, py)) {
+		if (!validCellPosition(px, py) || getPieceColor(px, py) != color) {
 			onGameEndedBadWinningPath(players[turn]);
 			selfdestruct(players[turn]);
 			return;
@@ -151,7 +194,7 @@ contract HexGameInstance {
 			px = positions[i];
 			py = positions[i+1];
 
-			if (!validPosition(px, py) ||  !neighbourOf(px, py, positions[i-2], positions[i-1]) || gameField[py][px].piece != color) {
+			if (!validCellPosition(px, py) || !neighbourOf(px, py, positions[i-2], positions[i-1]) || getPieceColor(px,py) != color) {
 				onGameEndedBadWinningPath(players[turn]);
 				selfdestruct(players[turn]);
 				return;
@@ -163,62 +206,16 @@ contract HexGameInstance {
 		selfdestruct(msg.sender);
 	}
 
-	function swapPieceColor(uint movenum) checkValidSwap(movenum) public {
-		playerColor[players[0]] = PieceColor.BLU;
-		playerColor[players[1]] = PieceColor.RED;
-		onPieceSwapped(moveNumber);
-		nextMove();
-	}
-
-	/**
-	 * Kill contract. If player chooses to end game, he loses the game. 
-	 */
-	function endGame() checkEndGame() public {
-		uint8 n = (turn + 1) % 2;
-		onGameEnded(players[n]);
-		selfdestruct(players[n]);
-	}
-
-	// Increment move counter and give turn to the next player.
-	function nextMove() private {
-		moveNumber += 1;
-		turn = (uint8)(moveNumber % 2);
-	}
-
-	// (1) Ensure that move is made by the person we expect;
-	// (2) Ensure that that person is not doing insertion outside the board.
-	// (3) Ensure that person is using a piece color that we expect.
-	modifier checkValidPiecePlacement(uint x, uint y, PieceColor color, uint movenum) {
-		require(moveNumber == movenum);
-		require(msg.sender == players[turn]);
-		require(x >= 0 && x < BOARD_SIZE);
-		require(y >= 0 && y < BOARD_SIZE);
-		require(playerColor[msg.sender] == color);
-		require(gameField[y][x].piece == PieceColor.NONE);
-		_;
-	}
-
-	// (1) Ensure that move is made by the person that we expect;
-	// (2) Ensure that swap move can be only made on the second move.
-	modifier checkValidSwap(uint movenum) {
-		require(msg.sender == players[turn]);
-		require(moveNumber == 1);
-		require(movenum == moveNumber);
-		_;
-	}
-
-	/**
-	 * Ensure that first and last elements of the path are appropriate targets. 
-	 * positions array is expected to have length greater than 0 and have even number elements, 2 per cell coordinate.
-	 * Red targets are oriented vertically, so any x is valid but only y = 0 and y = 10 are valid.
-	 * Blu targets are oriented horizontally, so only x = 0 and x = 10 are valid and any y is valid.
-	 */
-	modifier checkValidPossiblePath(uint[] positions, PieceColor color) {
-		require(positions.length > 0);
-		require(positions.length % 2 == 0);
-		require(compareTargetColor(positions[0], positions[1], color));
-		require(compareTargetColor(positions[positions.length-2], positions[positions.length-1], color));
-
+	// Positions array is expected to have length greater than 0 and have even number elements, 
+	// 2 per cell coordinate.
+	// Ensure that first and last elements of the path are appropriate targets. 
+	// Ensure first and last elements are valid cell positions and are targets of appropriate color.
+	modifier checkPathPreconditions(uint[] positions, PieceColor color) {
+		require(positions.length > 0 && positions.length % 2 == 0);
+		require(validCellPosition(positions[0], positions[1]));
+		require(validCellPosition(positions[positions.length-2], positions[positions.length-1]));
+		require(isTargetForColor(positions[0], positions[1], color));
+		require(isTargetForColor(positions[positions.length-2], positions[positions.length-1], color));
 		if (color == PieceColor.BLU) {
 			require(positions[1] == BOARD_SIZE-1 && positions[positions.length-1] == 0);
 		}
@@ -227,55 +224,53 @@ contract HexGameInstance {
 		}
 		_;
 	}
+	
+//==============================
+// swapPiececolor Implementation.
+//==============================
 
-	/**
-	 * Ensure than game is being ended by one of the players.
-	 */
-	modifier checkEndGame() {
+	// When the second player makes the first move, he can instead choose to swap pieces with 
+	// opponent.
+	function swapPieceColor(uint movenum) checkSwapPreconditions(movenum) public {
+		playerColor[players[0]] = PieceColor.BLU;
+		playerColor[players[1]] = PieceColor.RED;
+		onPieceSwapped(moveNumber);
+		nextMove();
+	}
+
+	// (1) Ensure that move is made by the person that we expect;
+	// (2) Ensure that swap move can be only made on the second move.
+	modifier checkSwapPreconditions(uint movenum) {
+		require(msg.sender == players[turn]);
+		require(moveNumber == 1);
+		require(movenum == moveNumber);
+		_;
+	}
+
+//==============================
+// endGame Implementation.
+//==============================
+
+	// Kill contract. Caller forfeits and loses the game. 
+	function endGame() checkAuthorizedEndGameSender() public {
+		uint8 n = (turn + 1) % 2;
+		onGameEnded(players[n]);
+		selfdestruct(players[n]);
+	}
+
+	// Ensure than game is being ended by one of the participants.
+	modifier checkAuthorizedEndGameSender() {
 		require(msg.sender == players[turn] || msg.sender == players[(turn+1) % 2]);
 		_;
 	}
 
-	/**
-	 * Return true if p1 is a neighbour of p2. p2 should be a valid cell position.
-	 */ 
-	function neighbourOf(uint p1x, uint p1y, uint p2x, uint p2y) private pure returns (bool) {
-		if (comparePositions(p1x-1, p1y,   p2x, p2y)) return true; 
-		if (comparePositions(p1x+1, p1y,   p2x, p2y)) return true; 
-		if (comparePositions(p1x,   p1y-1, p2x, p2y)) return true; 
-		if (comparePositions(p1x,   p1y+1, p2x, p2y)) return true; 
-		if (comparePositions(p1x-1, p1y+1, p2x, p2y)) return true; 
-		if (comparePositions(p1x+1, p1y-1, p2x, p2y)) return true; 
-		return false;
-	}
+//==============================
+// nextMove Implementation.
+//==============================
 
-	/**
-	 * check if given Position is inside the board.
-	 */ 
-	function validPosition(uint p1x, uint p1y) private pure returns (bool) {
-		return (p1x >= 0 && p1x < BOARD_SIZE && p1y >= 0 && p1y < BOARD_SIZE);
-	}
-
-	/**
-	 * Position comparison function.
-	 */
-	function comparePositions(uint p1x, uint p1y, uint p2x, uint p2y) private pure returns (bool) {
-		return (p1x == p2x && p1y == p2y);
-	}
-
-	/**
-	 * Returns true if piece color matches target color for some cell (x,y).
-	 */
-	function compareTargetColor(uint x, uint y, PieceColor color) private view returns (bool) {
-		if (color == PieceColor.RED) {
-			return (gameField[y][x].target == CellType.REDTARGET 
-				 || gameField[y][x].target == CellType.ANYTARGET);
-		}
-		if (color == PieceColor.BLU) {
-			return (gameField[y][x].target == CellType.BLUTARGET 
-				 || gameField[y][x].target == CellType.ANYTARGET);
-		}
-
-		return false;
+	// Increment move counter and give turn to the next player.
+	function nextMove() private {
+		moveNumber += 1;
+		turn = (uint8)(moveNumber % 2);
 	}
 }
