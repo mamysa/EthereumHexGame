@@ -89,6 +89,10 @@ GameInstance.prototype.processEvent = function(result) {
 	if (result.event == 'onGameEnded') {
 		this.winner = args.winner;	
 	}
+
+	if (result.event == 'onGameEndedBadWinningPath') {
+		this.winner = args.winner;
+	}
 }
 
 GameInstance.prototype.isMyTurn = function() {
@@ -110,7 +114,7 @@ GameInstance.prototype.placePiece = function(pieceLocation, color) {
 	var p = web3.toBigNumber(color);
 	var m = web3.toBigNumber(this.moveNumber);
 	console.log("here");
-	this.instance.placePiece(x, y, p, m, { }, function(err, result){
+	this.instance.placePiece(x, y, p, m, { from: currentAccount }, function(err, result){
 		if (err) {
 			//user cancelled transaction
 			console.log(err);
@@ -135,7 +139,7 @@ GameInstance.prototype.placePieceAndCheckWinningCondition = function(pieceLocati
 	var p = web3.toBigNumber(color);
 	var m = web3.toBigNumber(this.moveNumber);
 
-	this.instance.placePieceAndCheckWinningCondition(x, y, p, m, a, { }, function(err, result) {
+	this.instance.placePieceAndCheckWinningCondition(x, y, p, m, a, { from: currentAccount }, function(err, result) {
 		if (err) {
 			// user cancelled transaction
 			console.log(err);
@@ -153,7 +157,7 @@ GameInstance.prototype.placePieceAndCheckWinningCondition = function(pieceLocati
 GameInstance.prototype.swapPieceColor = function() {
 	var m = web3.toBigNumber(this.moveNumber);
 
-	this.instance.swapPieceColor(m, { }, function(err, result) {
+	this.instance.swapPieceColor(m, { from: currentAccount }, function(err, result) {
 		if (err) {
 			console.log(err);
 		}

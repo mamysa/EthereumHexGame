@@ -37,20 +37,21 @@
 
 		<div class="pure-u-5-5 button-container">
 		
-			<button type="button" onclick="startGame()">Start Game</button>
-			<button type="button" onclick="createTableEntry('122','121','2455')">End Game</button>
+			<button type="button"
+					class="pure-button pure-button-primary button-large" 
+					onclick="onStartPressed()">Start</button>
 
 			<button type="button" 
 					class="pure-button pure-button-primary button-large" 
 					onclick="onPlacePiecePressed()">Place</button>
 
 			<button type="button" 
-				class="pure-button pure-button-primary button-error button-large"	
-				onclick="onForfeitPressed()">Forfeit</button>
+					class="pure-button pure-button-primary button-error button-large"	
+					onclick="onForfeitPressed()">Forfeit</button>
 		</div>
 
 		<div class="pure-u-5-5 table-container">
-			<table class="pure-table pure-table-horizontal" style="display:inline-block;" id="game_table">
+			<table class="pure-table pure-table-horizontal" style="margin:0 auto;" id="game_table">
 				 <thead>
 					<tr>
 						<th>Game Address</th>

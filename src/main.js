@@ -20,6 +20,9 @@ setInterval( function() {
 
 var gameFactory = new GameInstanceManager(gameFactoryAddress);
 
+function onStartPressed() {
+	gameFactory.startGame();
+}
 
 
 
@@ -40,6 +43,7 @@ function onForfeitPressed() {
 function onOpenPressed() {
 	gameFactory.setCurrentGameInstance(this.id);
 }
+
 
 function createTableEntry(gameAddress, player1, player2) {
 	var tr = document.createElement('tr');	

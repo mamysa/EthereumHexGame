@@ -9,8 +9,8 @@ function GameInstanceManager(gameFactoryAddress) {
 }
 
 /**
- * Reset state when user switches wallets. Do this to prevent inconsistent 
- * GameInstances.
+ * Reset when user switches wallets - the user may be participating in 
+ * different games.
  */
 GameInstanceManager.prototype.reset = function() {
 	this.currentGameInstance = null;
@@ -28,17 +28,28 @@ GameInstanceManager.prototype.reset = function() {
 		if (result.event == 'onGameInstanceCreated') {
 			if (currentAccount == args.p1 || currentAccount == args.p2) {
 				self.addGameInstance(args.gameInstance, args.p1, args.p2);
-
-				//TODO maybe store in local storage?
 			}
 		}
 	});
 }
 
+/**
+ * call startGame in GameFactory contract.
+ */
+GameInstanceManager.prototype.startGame = function() {
+	this.gameFactory.startGame({ from: currentAccount }, function(err, result) {
+		if (err) {
+			console.log(err);
+		}
+
+		if (result) {
+			console.log(result);
+		}
+	});
+}
+
 GameInstanceManager.prototype.addGameInstance = function(gameInstanceAddress, p1, p2) {
-	console.log("hererere");
 	if (!(gameInstanceAddress in this.gameInstanceMap)) { 
-		console.log("add game instance");
 		var instance = new GameInstance(gameInstanceAddress, p1, p2);
 		this.gameInstanceMap[gameInstanceAddress] = instance;
 
