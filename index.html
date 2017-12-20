@@ -2,35 +2,28 @@
 	<head>
 		<script src="/parity-utils/inject.js"></script>
 		<link rel="stylesheet" href="https://unpkg.com/purecss@1.0.0/build/pure-min.css" integrity="sha384-nn4HPE8lTHyVtfCBi5yW9d20FjT8BJwUXyWZT9InLYax14RDjBj46LmSztkmNP9w" crossorigin="anonymous">
-		
+		<style>
+			.button-container {
+				text-align: center;
+				padding:20px;
+				background-color: #f7d7cf;
+			}
 
+			.button-error {
+				background: rgb(202, 60, 60); /* this is a maroon */
+			}
 
-	<style>
-		.button-container {
-			text-align: center;
-			padding:20px;
-			background-color: #f7d7cf;
-		}
+			.button-large {
+				font-size: 120%;
+			}
 
-		.button-error {
-            background: rgb(202, 60, 60); /* this is a maroon */
-        }
-
-		.button-large {
-            font-size: 120%;
-        }
-
-		.table-container {
-			background-color: #f7d7cf;
-			width: 70%;
-			margin: 0 auto;
-			display:block;
-		}
-		
-
-
-	</style>
-
+			.table-container {
+				background-color: #f7d7cf;
+				width: 70%;
+				margin: 0 auto;
+				display:block;
+			}
+		</style>
 	</head>
 
 
@@ -38,6 +31,8 @@
 		<script type="text/javascript" src=src/abi.js></script>
 		<script type="text/javascript" src=src/BoardModel.js></script>
 		<script type="text/javascript" src=src/BoardView.js></script>
+		<script type="text/javascript" src=src/GameInstance.js></script>
+		<script type="text/javascript" src=src/GameInstanceManager.js></script>
 		<script type="text/javascript" src=src/main.js></script>
 
 		<div class="pure-u-5-5 button-container">
