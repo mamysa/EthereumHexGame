@@ -20,7 +20,6 @@ function GameInstance(gameInstanceAddress, player1Address, player2Address) {
 	this.eventStrs = [];
 
 	this.isDrawable = false;
-	this.transactionHashes = [];
 
 	var self = this;
 
@@ -57,21 +56,12 @@ GameInstance.prototype.draw = function() {
 			updateViewWinner(this.path[i], this.board.getCell(this.path[i]));
 		}
 	}
-	console.log(this.eventStrs);
 	clearLog();
 	putLog(this.eventStrs);
 }
 
 GameInstance.prototype.processEvent = function(result) {
 
-	var hash = result.transactionHash;
-	if (this.transactionHashes.indexOf(hash) != -1) {
-		//return;
-	}
-
-	this.transactionHashes.push(hash);
-	console.log(this.transactionHashes);
-	console.log(result);
 	var args = result.args;
 	if (result.event == 'onGameStarted') {
 		var player1 = args.p1;
@@ -145,8 +135,10 @@ GameInstance.prototype.processEvent = function(result) {
 		this.eventStrs.push(eventStr);
 	}
 
-	if (this.isDrawable)
+	if (this.isDrawable) {
+		clearLog();
 		putLog(this.eventStrs);
+	}
 }
 
 GameInstance.prototype.isMyTurn = function() {

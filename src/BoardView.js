@@ -136,8 +136,8 @@ function updateView(loc, pieceColor) {
 function updateViewWinner(loc, pieceColor) {
 	var cell = document.getElementById(`${loc.x},${loc.y}`);
 	var color = '#eaedf2';
-	if (pieceColor == PieceColor.RED) color = "#f7044d"
-	if (pieceColor == PieceColor.BLU) color = "#051c82"
+	if (pieceColor == PieceColor.RED) color = "#ff002e"
+	if (pieceColor == PieceColor.BLU) color = "#1500fc"
 	cell.setAttributeNS(null, 'fill', color);
 }
 
