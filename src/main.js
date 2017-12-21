@@ -11,7 +11,6 @@ setInterval( function() {
 	var account = web3.eth.accounts[0];
 	if (currentAccount != account) {
 		currentAccount = account;
-		console.log(currentAccount);
 		gameFactory.reset();
 		resetView();
 	}
@@ -40,8 +39,25 @@ function onForfeitPressed() {
 	}
 }
 
+function onSwapPressed() {
+	var currentGameInstance = gameFactory.getCurrentGameInstance();
+	if (currentGameInstance != null) {
+		currentGameInstance.swapPieceColor();
+	}
+}
+
 function onOpenPressed() {
 	gameFactory.setCurrentGameInstance(this.id);
+}
+
+function clearLog() {
+	document.getElementById('gamelog').innerHTML = ''; 
+}
+
+function putLog(log) {
+	for (var i = 0; i < log.length; i++) {
+		document.getElementById('gamelog').innerHTML += log[i] + '\n';
+	}
 }
 
 

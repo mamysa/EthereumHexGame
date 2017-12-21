@@ -11,15 +11,13 @@ var PieceColor = {
 	BLU: 2
 };
 
-
-
 function Cell(type, color) {
 	this.type = type;
 	this.color = color;
 	this.drawable = null;
 }
 
-const BOARD_SIZE = 11;
+const BOARD_SIZE = 5;
 
 // The board can be represented as 11x11 matrix. The rows of the board are stored
 // on diagonals of this matrix, from bottom left to top right. 

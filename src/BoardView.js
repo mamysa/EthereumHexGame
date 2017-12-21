@@ -66,7 +66,7 @@ function getSVGBoard() {
 		for (var cell = 0; cell <= cells; cell++) {
 			var elem = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
 			var x = posx + cell * r * 2;
-			var y = posy;
+			var y = posy + 260;
 
 			elem.setAttributeNS(null, 'points', getHexCoordinates(x, y, r));
 			elem.setAttributeNS(null, 'fill', '#eaedf2');
@@ -98,7 +98,7 @@ var svg;
 function initializeView() {
 	svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
 	svg.setAttributeNS(null,"id","svgDoc");
-	svg.setAttributeNS(null,"height","100%");
+	svg.setAttributeNS(null,"height","80%");
 	svg.setAttributeNS(null,"width","100%");
 
 	document.getElementsByTagName('body')[0].appendChild(svg);
@@ -134,7 +134,6 @@ function updateView(loc, pieceColor) {
 }
 
 function updateViewWinner(loc, pieceColor) {
-	console.log("HERE");
 	var cell = document.getElementById(`${loc.x},${loc.y}`);
 	var color = '#eaedf2';
 	if (pieceColor == PieceColor.RED) color = "#f7044d"

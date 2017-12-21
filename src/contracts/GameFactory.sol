@@ -59,7 +59,7 @@ contract HexGameInstance {
 	mapping (uint => mapping(uint => PieceColor)) public board;
 
 	// game board dimensions
-	uint constant BOARD_SIZE = 11;
+	uint constant BOARD_SIZE = 5;
 
 	// index of the player who has the next turn. _player1 if 0, _player2 if 1 
 	uint8 turn;

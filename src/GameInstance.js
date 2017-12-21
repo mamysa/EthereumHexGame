@@ -17,8 +17,10 @@ function GameInstance(gameInstanceAddress, player1Address, player2Address) {
 	this.moveNumber = 0;
 	this.winner = null;
 	this.path = [];
+	this.eventStrs = [];
 
 	this.isDrawable = false;
+	this.transactionHashes = [];
 
 	var self = this;
 
@@ -55,9 +57,20 @@ GameInstance.prototype.draw = function() {
 			updateViewWinner(this.path[i], this.board.getCell(this.path[i]));
 		}
 	}
+	console.log(this.eventStrs);
+	clearLog();
+	putLog(this.eventStrs);
 }
 
 GameInstance.prototype.processEvent = function(result) {
+
+	var hash = result.transactionHash;
+	if (this.transactionHashes.indexOf(hash) != -1) {
+		//return;
+	}
+
+	this.transactionHashes.push(hash);
+	console.log(this.transactionHashes);
 	console.log(result);
 	var args = result.args;
 	if (result.event == 'onGameStarted') {
@@ -67,6 +80,9 @@ GameInstance.prototype.processEvent = function(result) {
 		var player2color = args.p2color.toNumber();
 		this.players.push({ player: player1, color: player1color });
 		this.players.push({ player: player2, color: player2color });
+
+		var eventStr = `Game started, ${player1} = RED, ${player2} = BLUE`;
+		this.eventStrs.push(eventStr);
 	}
 
 	if (result.event == 'onPiecePlaced') {
@@ -83,6 +99,10 @@ GameInstance.prototype.processEvent = function(result) {
 			updateView(cell, color);
 		this.board.setCell(cell, color);
 		this.moveNumber = movenum + 1;
+
+
+		var eventStr = `${player} places piece on ${x},${y}`;
+		this.eventStrs.push(eventStr);
 	}
 
 	if (result.event == 'onPieceSwapped') {
@@ -90,10 +110,18 @@ GameInstance.prototype.processEvent = function(result) {
 		this.players[0].color = PieceColor.BLU;
 		this.players[1].color = PieceColor.RED;
 		this.moveNumber = movenum + 1;
+
+		var eventStr = "Piece Color Swap!";
+		this.eventStrs.push(eventStr);
+
 	}
 
 	if (result.event == 'onGameEnded') {
 		this.winner = args.winner;	
+
+		var eventStr = `${this.winner} wins!`;
+		this.eventStrs.push(eventStr);
+
 		
 
 		var color = this.getColorForPlayer(this.winner);
@@ -112,7 +140,13 @@ GameInstance.prototype.processEvent = function(result) {
 
 	if (result.event == 'onGameEndedBadWinningPath') {
 		this.winner = args.winner;
+
+		var eventStr = `${this.winner} wins, opponent tried to cheat!`;
+		this.eventStrs.push(eventStr);
 	}
+
+	if (this.isDrawable)
+		putLog(this.eventStrs);
 }
 
 GameInstance.prototype.isMyTurn = function() {
@@ -155,11 +189,11 @@ GameInstance.prototype.placePiece = function(pieceLocation, color) {
 /**
  * call placePieceAndCheckWinningCondition.
  */
-GameInstance.prototype.placePieceAndCheckWinningCondition = function(pieceLocation, color, path) {
+GameInstance.prototype.placePieceAndCheckWinningCondition = function(pieceLocation, color) {
 	var a = [];
-	for (var i = 0; i < path.length; i++) {
-		a.push(web3.toBigNumber(path[i].x));
-		a.push(web3.toBigNumber(path[i].y));
+	for (var i = 0; i < this.path.length; i++) {
+		a.push(web3.toBigNumber(this.path[i].x));
+		a.push(web3.toBigNumber(this.path[i].y));
 	}
 	var x = web3.toBigNumber(pieceLocation.x);	
 	var y = web3.toBigNumber(pieceLocation.y);	
@@ -253,7 +287,7 @@ GameInstance.prototype.onPlacePieceClick = function() {
 		this.placePiece(this.selectedCell, color);
 	}
 	if (this.path.length != 0) {
-		this.placePieceAndCheckWinningCondition(this.selectedCell, color, path);
+		this.placePieceAndCheckWinningCondition(this.selectedCell, color);
 	}
 
 	this.selectedCell = null;
