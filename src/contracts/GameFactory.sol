@@ -9,7 +9,6 @@ contract GameFactory {
 	event onGameInstanceCreated(address gameInstance, address p1, address p2);
 	event onPlayerWaiting(address waitingPlayer);
 
-
 	function GameFactory() public {
 		owner = msg.sender;
 		waitingPlayer = address(0x0);

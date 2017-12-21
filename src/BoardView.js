@@ -43,10 +43,10 @@ function getSVGBoard() {
 
 	
 	var group = document.createElementNS("http://www.w3.org/2000/svg", "g");
-	group.appendChild(backgroundRectangle(0,   -ry, tx, ry*2, '#ff9d8c'));
-	group.appendChild(backgroundRectangle(-tx,  ry, tx, ry*2, '#ff9d8c'));
-	group.appendChild(backgroundRectangle(-tx, -ry, tx, ry*2, '#8cebff'));
-	group.appendChild(backgroundRectangle(0,    ry, tx, ry*2, '#8cebff'));
+	group.appendChild(backgroundRectangle(0,   -ry, tx, ry*2, '#ffddd3'));
+	group.appendChild(backgroundRectangle(-tx,  ry, tx, ry*2, '#ffddd3'));
+	group.appendChild(backgroundRectangle(-tx, -ry, tx, ry*2, '#ccecff'));
+	group.appendChild(backgroundRectangle(0,    ry, tx, ry*2, '#ccecff'));
 	
 	var matrixDiagonalCol = 1;
 	for (var row = 0; row < BOARD_SIZE+BOARD_SIZE-1; row++) {
@@ -128,8 +128,8 @@ function click(e) {
 function updateView(loc, pieceColor) {
 	var cell = document.getElementById(`${loc.x},${loc.y}`);
 	var color = '#eaedf2';
-	if (pieceColor == PieceColor.RED) color = "#bc492f"
-	if (pieceColor == PieceColor.BLU) color = "#2f56bc"
+	if (pieceColor == PieceColor.RED) color = "#ffb099"
+	if (pieceColor == PieceColor.BLU) color = "#91c8ff"
 	cell.setAttributeNS(null, 'fill', color);
 }
 
