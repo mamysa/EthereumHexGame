@@ -6,9 +6,9 @@ var CellType = {
 };
 
 var PieceColor = {
-	RED: 0,
-	BLU: 1,
-	UNOCCUPIED: 2
+	UNOCCUPIED: 0,
+	RED: 1,
+	BLU: 2
 };
 
 

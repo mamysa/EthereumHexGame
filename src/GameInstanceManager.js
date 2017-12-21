@@ -24,7 +24,11 @@ GameInstanceManager.prototype.reset = function() {
 
 	var self = this;
 	this.gameFactory.allEvents( { fromBlock: '0' }, function(err,result) {
+		console.log(result);
 		var args = result.args;
+		if (result.event == 'onPlayerWaiting') {
+			console.log(args.waitingPlayer);
+		}
 		if (result.event == 'onGameInstanceCreated') {
 			if (currentAccount == args.p1 || currentAccount == args.p2) {
 				self.addGameInstance(args.gameInstance, args.p1, args.p2);
@@ -37,9 +41,11 @@ GameInstanceManager.prototype.reset = function() {
  * call startGame in GameFactory contract.
  */
 GameInstanceManager.prototype.startGame = function() {
-	this.gameFactory.startGame({ from: currentAccount }, function(err, result) {
+	//#console.log(currentAccount);
+	var gasEstimate = this.gameFactory.startGame.estimateGas({from: currentAccount });
+	this.gameFactory.startGame({ from: currentAccount, gas:gasEstimate }, function(err, result) {
 		if (err) {
-			console.log(err);
+			console.err(err);
 		}
 
 		if (result) {

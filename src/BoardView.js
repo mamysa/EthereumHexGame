@@ -133,6 +133,15 @@ function updateView(loc, pieceColor) {
 	cell.setAttributeNS(null, 'fill', color);
 }
 
+function updateViewWinner(loc, pieceColor) {
+	console.log("HERE");
+	var cell = document.getElementById(`${loc.x},${loc.y}`);
+	var color = '#eaedf2';
+	if (pieceColor == PieceColor.RED) color = "#f7044d"
+	if (pieceColor == PieceColor.BLU) color = "#051c82"
+	cell.setAttributeNS(null, 'fill', color);
+}
+
 function resetView() {
 	for (var y = 0; y < BOARD_SIZE; y++) 
 	for (var x = 0; x < BOARD_SIZE; x++)  {

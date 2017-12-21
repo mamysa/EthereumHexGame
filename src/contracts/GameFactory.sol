@@ -8,7 +8,6 @@ contract GameFactory {
 
 	event onGameInstanceCreated(address gameInstance, address p1, address p2);
 	event onPlayerWaiting(address waitingPlayer);
-	event onStartGameCalled(address addr);
 
 
 	function GameFactory() public {
@@ -34,8 +33,6 @@ contract GameFactory {
 			HexGameInstance game = new HexGameInstance(p1, p2);
 			onGameInstanceCreated(game, p1, p2);
 		}
-		
-		onStartGameCalled(msg.sender);
 	}
 
 	/*
@@ -77,6 +74,11 @@ contract HexGameInstance {
 	event onPiecePlaced(uint x, uint y, PieceColor pieceColor, address player, uint movenum);
 	event onPieceSwapped(uint movenum);
 	
+
+//==============================
+// Constructor . 
+//==============================
+
 	function HexGameInstance(address _player1, address _player2) public {
 		players[0] = _player1; playerColor[players[0]] = PieceColor.RED;
 		players[1] = _player2; playerColor[players[1]] = PieceColor.BLU;

@@ -15,9 +15,8 @@ function GameInstance(gameInstanceAddress, player1Address, player2Address) {
 	this.players = [ ];
 	this.board = new Board();
 	this.moveNumber = 0;
-
-		
-	this.winner = '';
+	this.winner = null;
+	this.path = [];
 
 	this.isDrawable = false;
 
@@ -48,6 +47,13 @@ GameInstance.prototype.draw = function() {
 	for (y = 0; y < BOARD_SIZE; y++) {
 		var loc = {x: x, y: y};
 		updateView(loc, this.board.getCell(loc));
+	}
+
+	if (this.path.length != 0) {
+		console.log(this.path);
+		for (var i = 0; i < this.path.length; i++) {
+			updateViewWinner(this.path[i], this.board.getCell(this.path[i]));
+		}
 	}
 }
 
@@ -88,6 +94,20 @@ GameInstance.prototype.processEvent = function(result) {
 
 	if (result.event == 'onGameEnded') {
 		this.winner = args.winner;	
+		
+
+		var color = this.getColorForPlayer(this.winner);
+		if (this.path.length == 0) {
+			this.path = findPath(this.board, color); 
+			console.log(this.path);
+		}
+
+
+		for (var i = 0; i < this.path.length; i++) {
+			if (this.isDrawable) 
+				updateViewWinner(this.path[i], color);
+		}
+
 	}
 
 	if (result.event == 'onGameEndedBadWinningPath') {
@@ -104,6 +124,13 @@ GameInstance.prototype.getMyColor = function() {
 	if (currentAccount == this.players[1].player) { return this.players[1].color; }
 	return PieceColor.UNOCCUPIED;
 }
+
+GameInstance.prototype.getColorForPlayer = function(address) {
+	if (address == this.players[0].player) { return this.players[0].color; }
+	if (address == this.players[1].player) { return this.players[1].color; }
+	return PieceColor.UNOCCUPIED;
+}
+
 
 /**
  * Fire transaction when user places the piece
@@ -139,7 +166,10 @@ GameInstance.prototype.placePieceAndCheckWinningCondition = function(pieceLocati
 	var p = web3.toBigNumber(color);
 	var m = web3.toBigNumber(this.moveNumber);
 
-	this.instance.placePieceAndCheckWinningCondition(x, y, p, m, a, { from: currentAccount }, function(err, result) {
+	var gasEstimate = this.instance.placePieceAndCheckPath.estimateGas(x,y,p,m,a,{from: currentAccount });
+	console.log("Gas estimate: " +gasEstimate);
+
+	this.instance.placePieceAndCheckPath(x, y, p, m, a, { from: currentAccount  }, function(err, result) {
 		if (err) {
 			// user cancelled transaction
 			console.log(err);
@@ -187,6 +217,7 @@ GameInstance.prototype.forfeit = function() {
  * Process board click. 
  */ 
 GameInstance.prototype.onBoardClick = function(pieceLocation) {
+	console.log(pieceLocation);
 	if (!this.isMyTurn()) {
 		console.log('Not my turn');
 		return;
@@ -217,12 +248,11 @@ GameInstance.prototype.onPlacePieceClick = function() {
 	}
 
 	var color = this.getMyColor();
-	var path = findPath(this.board, color); 
-
-	if (path.length == 0) {
+	this.path = findPath(this.board, color); 
+	if (this.path.length == 0) {
 		this.placePiece(this.selectedCell, color);
 	}
-	if (path.length != 0) {
+	if (this.path.length != 0) {
 		this.placePieceAndCheckWinningCondition(this.selectedCell, color, path);
 	}
 
