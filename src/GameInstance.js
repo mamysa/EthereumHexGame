@@ -169,15 +169,12 @@ GameInstance.prototype.placePiece = function(pieceLocation, color) {
 	var y = web3.toBigNumber(pieceLocation.y);	
 	var p = web3.toBigNumber(color);
 	var m = web3.toBigNumber(this.moveNumber);
-	console.log("here");
-	this.instance.placePiece(x, y, p, m, { from: currentAccount }, function(err, result){
+	var self = this;
+	this.instance.placePiece(x, y, p, m, { from: currentAccount }, function(err, result) {
 		if (err) {
-			//user cancelled transaction
-			console.log(err);
-		}
-		if (result) {
-			console.log("PLACE PIECE");
-			console.log(result);
+			self.board.setCell(self.selectedCell, PieceColor.UNOCCUPIED);
+			updateView(self.selectedCell, PieceColor.UNOCCUPIED);
+			self.selectedCell = null;
 		}
 	});
 }
@@ -197,15 +194,13 @@ GameInstance.prototype.placePieceAndCheckWinningCondition = function(pieceLocati
 	var m = web3.toBigNumber(this.moveNumber);
 
 	var gasEstimate = this.instance.placePieceAndCheckPath.estimateGas(x,y,p,m,a,{from: currentAccount });
-	console.log("Gas estimate: " +gasEstimate);
 
-	this.instance.placePieceAndCheckPath(x, y, p, m, a, { from: currentAccount  }, function(err, result) {
+	var self = this;
+	this.instance.placePieceAndCheckPath(x, y, p, m, a, { from: currentAccount }, function(err, result) {
 		if (err) {
-			// user cancelled transaction
-			console.log(err);
-		}
-		if (result) {
-			console.log(result);
+			self.board.setCell(self.selectedCell, PieceColor.UNOCCUPIED);
+			updateView(self.selectedCell, PieceColor.UNOCCUPIED);
+			self.selectedCell = null;
 		}
 	});
 }
@@ -217,12 +212,12 @@ GameInstance.prototype.placePieceAndCheckWinningCondition = function(pieceLocati
 GameInstance.prototype.swapPieceColor = function() {
 	var m = web3.toBigNumber(this.moveNumber);
 
+	var self = this;
 	this.instance.swapPieceColor(m, { from: currentAccount }, function(err, result) {
-		if (err) {
-			console.log(err);
-		}
-		if (result) {
-			console.log(result);
+		if (self.selectedCell != null) {
+			self.board.setCell(self.selectedCell, PieceColor.UNOCCUPIED);
+			updateView(self.selectedCell, PieceColor.UNOCCUPIED);
+			self.selectedCell = null;
 		}
 	});
 }
@@ -232,12 +227,12 @@ GameInstance.prototype.swapPieceColor = function() {
  * round!
  */
 GameInstance.prototype.forfeit = function() {
+	var self = this;
 	this.instance.endGame({from: currentAccount}, function(err, result) {
-		if (err) {
-			console.log(err);
-		}
-		if (result) {
-			console.log(result);
+		if (self.selectedCell != null) {
+			self.board.setCell(self.selectedCell, PieceColor.UNOCCUPIED);
+			updateView(self.selectedCell, PieceColor.UNOCCUPIED);
+			self.selectedCell = null;
 		}
 	});
 }
@@ -285,6 +280,4 @@ GameInstance.prototype.onPlacePieceClick = function() {
 	if (this.path.length != 0) {
 		this.placePieceAndCheckWinningCondition(this.selectedCell, color);
 	}
-
-	this.selectedCell = null;
 }
