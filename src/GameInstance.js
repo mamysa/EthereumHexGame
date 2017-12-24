@@ -39,6 +39,10 @@ GameInstance.prototype.toForeground = function() {
 	}
 }
 
+GameInstance.prototype.toBackground = function() {
+	this.isDrawable = false;
+}
+
 /**
  * Redraw board from local state
  */

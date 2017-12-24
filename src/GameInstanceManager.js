@@ -68,7 +68,7 @@ GameInstanceManager.prototype.setCurrentGameInstance = function(gameAddress) {
 	if (this.currentGameInstance != null)
 		this.currentGameInstance.toBackground();
 	this.currentGameInstance = this.gameInstanceMap[gameAddress];
-	this.currentGameInstance.toForeground(true);
+	this.currentGameInstance.toForeground();
 	this.currentGameInstance.draw();
 }
 
