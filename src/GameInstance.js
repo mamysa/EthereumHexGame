@@ -21,23 +21,22 @@ function GameInstance(gameInstanceAddress, player1Address, player2Address) {
 
 	this.isDrawable = false;
 
-	var self = this;
-
-	this.instance.allEvents( { fromBlock: '0' }, function(err,result) {
-		if (err) {
-			console.log("event error");
-		}
-		if (result) {
-			self.processEvent(result);
-		}
-	});
+	// lazy initialization
+	this.initialized = false;
 }
 
-/**
- * If false, all calls to update updateView will not be executed.
- */
-GameInstance.prototype.setDrawable = function(value) {
-	this.isDrawable = value;
+GameInstance.prototype.toForeground = function() {
+	this.isDrawable = true;
+
+	if (!this.initialized) {
+		this.initialized = true;
+
+		var self = this;
+		this.instance.allEvents( { fromBlock: '0' }, function(err,result) {
+			if (err) { console.log("error"); }
+			if (result) { self.processEvent(result); }
+		});
+	}
 }
 
 /**
@@ -173,6 +172,7 @@ GameInstance.prototype.placePiece = function(pieceLocation, color) {
 			console.log(err);
 		}
 		if (result) {
+			console.log("PLACE PIECE");
 			console.log(result);
 		}
 	});
